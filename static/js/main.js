@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Add drag and drop functionality
 let draggedItem = null;
 
-// 初始化事件监听器的函数
+// 初始化事件监听器��数
 function initializeEventListeners() {
     document.querySelectorAll('.bookmark').forEach(bookmark => {
         bookmark.addEventListener('dragstart', function(e) {
@@ -211,14 +211,43 @@ let currentBookmark = null;
 // 显示右键菜单
 function showContextMenu(event, bookmarkElement) {
     event.preventDefault();
-    
     // 保存当前书签元素
     currentBookmark = bookmarkElement;
     
     const contextMenu = document.getElementById('contextMenu');
+    
+    // First make the menu visible but hidden to calculate dimensions
+    contextMenu.style.visibility = 'hidden';
     contextMenu.style.display = 'block';
-    contextMenu.style.left = event.pageX + 'px';
-    contextMenu.style.top = event.pageY + 'px';
+    
+    // Get viewport dimensions
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    
+    // Get menu dimensions after making it visible
+    const menuHeight = contextMenu.offsetHeight;
+    const menuWidth = contextMenu.offsetWidth;
+    
+    // Calculate positions
+    let posX = event.clientX;
+    let posY = event.clientY;
+    
+    // Check if menu would go below viewport
+    if (posY + menuHeight > viewportHeight) {
+        posY = viewportHeight - menuHeight - 10; // 10px padding from bottom
+    }
+    
+    // Check if menu would go beyond right edge
+    if (posX + menuWidth > viewportWidth) {
+        posX = viewportWidth - menuWidth - 10; // 10px padding from right
+    }
+    
+    // Set the position
+    contextMenu.style.left = `${posX}px`;
+    contextMenu.style.top = `${posY}px`;
+    
+    // Finally make the menu visible
+    contextMenu.style.visibility = 'visible';
 }
 
 // 编辑书签
@@ -265,7 +294,7 @@ async function submitEdit(event) {
     }
 }
 
-// 关闭编��对话框
+// 关闭编辑对话框
 function closeEditDialog() {
     document.getElementById('editDialog').style.display = 'none';
 }

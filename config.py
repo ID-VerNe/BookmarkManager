@@ -2,7 +2,7 @@
 DATABASE_PATH = "bookmarks.db"
 
 # Application configuration
-SECRET_KEY = "your-secret-key-here"
+SECRET_KEY = "your_secret_key"
 
 # Constants
 DEFAULT_COLLECTION = "Default"
