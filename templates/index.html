@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+<script>
+    const DEFAULT_COLLECTION = "{{ DEFAULT_COLLECTION }}";
+</script>
+
+{% block content %}
+<div class="container">
+    <div class="collections">
+        {% for collection in collections %}
+        <div class="collection">
+            <h3 oncontextmenu="showCollectionMenu(event, this)">{{ collection[1] }}</h3>
+            <div class="bookmarks">
+                {% for bookmark in bookmarks %}
+                    {% if bookmark[4] == collection[0] %}
+                    <div class="bookmark" draggable="true" data-id="{{ bookmark[0] }}" data-collection="{{ bookmark[5] }}" oncontextmenu="showContextMenu(event, this)">
+                        <img src="{{ bookmark[3] }}" alt="favicon" class="favicon">
+                        <a href="{{ bookmark[1] }}" target="_blank">{{ bookmark[2] }}</a>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 固定按钮 -->
+    <div class="fixed-buttons">
+        <div class="add-bookmark-button" onclick="showAddBookmarkDialog()">
+            <span>+</span>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-message {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div id="contextMenu" class="context-menu">
+        <div class="menu-item" onclick="editBookmark()">编辑</div>
+        <div class="menu-item" onclick="uploadIcon()">更换图标</div>
+        <div class="menu-item" onclick="moveBookmark()">移动到</div>
+        <div class="menu-item delete" onclick="deleteBookmark()">删除</div>
+    </div>
+
+    <div id="editDialog" class="modal">
+        <div class="modal-content">
+            <h3>编辑书签</h3>
+            <form id="editForm" onsubmit="submitEdit(event)">
+                <input type="hidden" id="editBookmarkId" name="id">
+                <div class="form-group">
+                    <label for="editUrl">URL</label>
+                    <input type="url" id="editUrl" name="url" required>
+                </div>
+                <div class="form-group">
+                    <label for="editTitle">标题</label>
+                    <input type="text" id="editTitle" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="editCollection">集合</label>
+                    <select id="editCollection" name="collection">
+                        {% for collection in collections %}
+                        <option value="{{ collection[1] }}">{{ collection[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit">保存</button>
+                    <button type="button" onclick="closeEditDialog()">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 新建集合对话框 -->
+    <div id="newCollectionDialog" class="modal">
+        <div class="modal-content">
+            <h3>新建集合</h3>
+            <form id="newCollectionForm" onsubmit="submitNewCollection(event)">
+                <div class="form-group">
+                    <label for="newCollectionName">集合名称</label>
+                    <input type="text" id="newCollectionName" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit">创建</button>
+                    <button type="button" onclick="closeNewCollectionDialog()">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 添加上传图标对话框 -->
+    <div id="uploadIconDialog" class="modal">
+        <div class="modal-content">
+            <h3>更换图标</h3>
+            <form id="uploadIconForm" onsubmit="submitIcon(event)">
+                <input type="hidden" id="iconBookmarkId" name="bookmark_id">
+                <div class="form-group">
+                    <label for="iconFile">选择图标文件</label>
+                    <input type="file" id="iconFile" name="icon" accept="image/*" required>
+                    <div class="icon-preview">
+                        <img id="iconPreview" src="" alt="Icon preview" style="display: none;">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit">保存</button>
+                    <button type="button" onclick="closeUploadDialog()">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 添加书签的对话框 -->
+    <div id="addBookmarkDialog" class="modal">
+        <div class="modal-content">
+            <h3>添加新书签</h3>
+            <form action="{{ url_for('add_new_bookmark') }}" method="POST">
+                <div class="form-group">
+                    <label for="bookmarkUrl">URL</label>
+                    <input type="text" id="bookmarkUrl" name="url" placeholder="URL" required onblur="previewBookmarkTitle(this.value)">
+                </div>
+                <div class="form-group">
+                    <label for="bookmarkTitle">
+                        标题
+                        <small>(留空将自动获取)</small>
+                    </label>
+                    <input type="text" id="bookmarkTitle" name="title" placeholder="可选，留空将自动获取">
+                </div>
+                <div class="form-group">
+                    <div class="collection-select">
+                        <label for="collectionSelect">选择集合</label>
+                        <select id="collectionSelect" name="collection">
+                            {% for collection in collections %}
+                            <option value="{{ collection[1] }}">
+                                {{ collection[1] }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="collection-create">
+                        <label>
+                            <input type="checkbox" id="createNewCollection" onchange="toggleNewCollectionInput()">
+                            创建新集合
+                        </label>
+                        <div id="newCollectionInputArea" style="display: none;">
+                            <input type="text" id="newCollectionName" name="new_collection" placeholder="输入新集合名称">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit">添加书签</button>
+                    <button type="button" onclick="closeAddBookmarkDialog()">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 添加集合的右键菜单 -->
+    <div id="collectionMenu" class="context-menu">
+        <div class="menu-item delete" onclick="deleteCollection()">删除集合</div>
+    </div>
+</div>
+{% endblock %} 

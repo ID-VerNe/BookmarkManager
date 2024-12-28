@@ -1,0 +1,15 @@
+{% for collection in collections %}
+<div class="collection" data-is-default="{{ collection[1] == DEFAULT_COLLECTION }}">
+    <h3 oncontextmenu="showCollectionMenu(event, this)">{{ collection[1] }}</h3>
+    <div class="bookmarks">
+        {% for bookmark in bookmarks %}
+            {% if bookmark[4] == collection[0] %}
+            <div class="bookmark" draggable="true" data-id="{{ bookmark[0] }}" data-collection="{{ bookmark[5] }}" oncontextmenu="showContextMenu(event, this)">
+                <img src="{{ bookmark[3] }}" alt="favicon" class="favicon" onclick="window.open('{{ bookmark[1] }}', '_blank'); event.stopPropagation();">
+                <a href="{{ bookmark[1] }}" target="_blank" title="{{ bookmark[2] }}" onclick="event.stopPropagation()">{{ bookmark[2] }}</a>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endfor %} 
