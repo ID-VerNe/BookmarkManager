@@ -18,7 +18,7 @@ A simple, clean, and efficient bookmark manager built with Flask. It allows you 
 
 ```
 bash
-git clone https://github.com/yourusername/bookmark-manager.git
+git clone https://github.com/ID-VerNe/BookmarkManager
 cd bookmark-manager
 ```
 
