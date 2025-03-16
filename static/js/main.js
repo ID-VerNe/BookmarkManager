@@ -1,3 +1,104 @@
+const MAX_URL_HISTORY = 9999;  // 最多保存100条历史记录
+
+// 初始化URL历史记录
+function getUrlHistory() {
+    return JSON.parse(localStorage.getItem('urlHistory') || '[]');
+}
+
+// 保存URL到历史记录
+function saveToUrlHistory(url) {
+    let history = getUrlHistory();
+    // 如果已存在，先删除旧的
+    history = history.filter(item => item !== url);
+    // 添加到开头
+    history.unshift(url);
+    // 限制数量
+    if (history.length > MAX_URL_HISTORY) {
+        history = history.slice(0, MAX_URL_HISTORY);
+    }
+    localStorage.setItem('urlHistory', JSON.stringify(history));
+}
+
+// 处理导航
+function handleNavigation(input, isSearch = false) {
+    let url = input.trim();
+    const searchPrefixes = {
+        google: ['?gg ', '？gg '],
+        baidu: ['?bd ', '？bd ', '?', '？'],
+        bing: ['?bi ', '？bi '],
+    };
+    const searchUrls = {
+        google: 'https://www.google.com/search?q=',
+        baidu: 'https://www.baidu.com/s?wd=',
+        bing: 'https://www.bing.com/search?q=', // 确保Bing的URL是正确的
+    };
+    let selectedSearchEngine = null;
+
+    for (const engine in searchPrefixes) {
+        for (const prefix of searchPrefixes[engine]) {
+            if (url.startsWith(prefix)) {
+                selectedSearchEngine = engine;
+                url = url.replace(prefix, '');
+                break;
+            }
+        }
+        if (selectedSearchEngine) {
+            break; // Exit outer loop once an engine is found
+        }
+    }
+
+    if (selectedSearchEngine) {
+        // Perform search with the selected engine
+        const searchUrl = searchUrls[selectedSearchEngine];
+        const a = document.createElement('a');
+        a.href = `${searchUrl}${encodeURIComponent(url)}`;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    } else if (url) {
+        if (!isSearch && isValidUrl(url)) {
+            // Is a valid URL, open in new tab
+            const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+            saveToUrlHistory(fullUrl);
+            const a = document.createElement('a');
+            a.href = fullUrl;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } else {
+            // Not a valid URL or isSearch, default to Baidu search
+            const searchUrl = searchUrls.baidu;
+            const a = document.createElement('a');
+            a.href = `${searchUrl}${encodeURIComponent(url)}`;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    }
+}
+
+// 检查是否是有效的URL
+function isValidUrl(string) {
+    try {
+        new URL(string);
+        return true;
+    } catch (_) {
+        // 尝试添加https://再检查一次
+        try {
+            new URL(`https://${string}`);
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+}
+
 // 显示添加书签对话框
 function showAddBookmarkDialog() {
     const dialog = document.getElementById('addBookmarkDialog');
@@ -103,16 +204,101 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // 搜索导航功能
+    const searchNav = document.getElementById('searchNav');
+    const suggestions = document.getElementById('urlSuggestions');
+    let selectedIndex = -1;
+
+    // 自动聚焦
+    searchNav.focus();
+
+    searchNav.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleNavigation(this.value, e.shiftKey);  // 添加 shift 键检测
+        } else if (e.key === 'Tab') {
+            e.preventDefault();
+            if (suggestions.firstChild) {
+                // 只获取 URL 文本内容
+                const urlText = suggestions.firstChild.querySelector('.url-text');
+                this.value = urlText.textContent;
+                suggestions.innerHTML = '';
+            }
+        } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            const items = suggestions.children;
+            if (items.length > 0) {
+                if (e.key === 'ArrowDown') {
+                    selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                } else {
+                    selectedIndex = Math.max(selectedIndex - 1, 0);
+                }
+                // 只获取 URL 文本内容
+                const urlText = items[selectedIndex].querySelector('.url-text');
+                this.value = urlText.textContent;
+            }
+        }
+    });
+
+    searchNav.addEventListener('input', function() {
+        const input = this.value.trim().toLowerCase();
+        if (input) {
+            const history = getUrlHistory();
+            const matches = history.filter(url => 
+                url.toLowerCase().includes(input)
+            ).slice(0, 5); // 最多显示5个建议
+
+            suggestions.innerHTML = '';
+            matches.forEach(url => {
+                const div = document.createElement('div');
+                div.className = 'url-suggestion-item';
+                
+                // 创建URL文本容器
+                const urlText = document.createElement('span');
+                urlText.textContent = url;
+                urlText.className = 'url-text';
+                urlText.onclick = () => {
+                    searchNav.value = url;
+                    suggestions.innerHTML = '';
+                    handleNavigation(url, false);
+                };
+                
+                // 创建删除按钮
+                const deleteBtn = document.createElement('span');
+                deleteBtn.textContent = '×';
+                deleteBtn.className = 'delete-history';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation(); // 阻止事件冒泡
+                    removeFromHistory(url);
+                    div.remove();
+                };
+                
+                div.appendChild(urlText);
+                div.appendChild(deleteBtn);
+                suggestions.appendChild(div);
+            });
+        } else {
+            suggestions.innerHTML = '';
+        }
+        selectedIndex = -1;
+    });
+
+    // 点击其他地方时隐藏建议
+    document.addEventListener('click', function(e) {
+        if (!searchNav.contains(e.target) && !suggestions.contains(e.target)) {
+            suggestions.innerHTML = '';
+        }
+    });
 });
 
 // Add drag and drop functionality
 let draggedItem = null;
 
-// 初始化事件监听器��数
+// 初始化事件监听器函数
 function initializeEventListeners() {
     document.querySelectorAll('.bookmark').forEach(bookmark => {
         bookmark.addEventListener('dragstart', function(e) {
-            // 如果是从链接开始拖拽，则阻止
             if (e.target.tagName.toLowerCase() === 'a') {
                 e.preventDefault();
                 return;
@@ -125,65 +311,65 @@ function initializeEventListeners() {
             this.classList.remove('dragging');
             draggedItem = null;
         });
-
-        // 添加点击处理
-        bookmark.addEventListener('click', function(e) {
-            // 如果点击的是链接，让链接处理点击事件
-            if (e.target.tagName.toLowerCase() === 'a') {
-                return;
-            }
-            // 如果点击的不是链接，阻止事件冒泡
-            e.preventDefault();
-        });
     });
 
-    document.querySelectorAll('.collection').forEach(collection => {
-        collection.addEventListener('dragover', function(e) {
+    document.querySelectorAll('.bookmarks').forEach(bookmarksContainer => {
+        bookmarksContainer.addEventListener('dragover', function(e) {
             e.preventDefault();
-            if (draggedItem) {
-                this.classList.add('drag-over');
+            const afterElement = getDragAfterElement(this, e.clientY);
+            const draggable = document.querySelector('.dragging');
+            if (afterElement == null) {
+                this.appendChild(draggable);
+            } else {
+                this.insertBefore(draggable, afterElement);
             }
         });
 
-        collection.addEventListener('dragleave', function(e) {
-            this.classList.remove('drag-over');
-        });
-
-        collection.addEventListener('drop', async function(e) {
+        bookmarksContainer.addEventListener('drop', async function(e) {
             e.preventDefault();
-            this.classList.remove('drag-over');
-            
-            if (draggedItem) {
-                const newCollectionName = this.querySelector('h3').textContent;
-                const bookmarkId = draggedItem.dataset.id;
-                
+            if (!draggedItem) return;
+
+            const bookmarks = Array.from(this.querySelectorAll('.bookmark'));
+            const orders = bookmarks.map((bookmark, index) => ({
+                id: bookmark.dataset.id,
+                order: index
+            }));
+
+            // 更新所有受影响的书签顺序
+            for (const {id, order} of orders) {
                 try {
-                    const response = await fetch('/move_bookmark', {
+                    await fetch('/update_bookmark_order', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            bookmark_id: bookmarkId,
-                            collection_name: newCollectionName
+                            bookmark_id: id,
+                            new_order: order
                         })
                     });
-                    
-                    if (response.ok) {
-                        // 获取更新后的集合内容
-                        const collectionsResponse = await fetch('/get_collections_html');
-                        if (collectionsResponse.ok) {
-                            const html = await collectionsResponse.text();
-                            document.querySelector('.collections').innerHTML = html;
-                            initializeEventListeners();
-                        }
-                    }
                 } catch (error) {
-                    console.error('Error moving bookmark:', error);
+                    console.error('Error updating bookmark order:', error);
                 }
             }
         });
     });
+}
+
+// 添加辅助函数来确定拖拽位置
+function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.bookmark:not(.dragging)')];
+
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
 // 页面加载时初始化
@@ -664,4 +850,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
-}); 
+});
+
+// 添加从历史记录中删除URL的函数
+function removeFromHistory(url) {
+    let history = getUrlHistory();
+    history = history.filter(item => item !== url);
+    localStorage.setItem('urlHistory', JSON.stringify(history));
+} 

@@ -48,14 +48,14 @@ button {
 .collections {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.25rem;
 }
 
 .collection {
     background-color: white;
-    padding: 0.5rem;
+    padding: 0.25rem;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     width: 100%;
 }
 
@@ -64,18 +64,18 @@ button {
     font-size: 1.2rem;
     color: #333;
     user-select: none;
-    padding: 0.5rem;
+    padding: 0.35rem 0.5rem;
     margin-bottom: 0;
 }
 
 .card-body {
-    padding: 0.5rem;
+    padding: 0.25rem;
 }
 
 .bookmarks {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.25rem;
+    gap: 0.2rem;
     align-items: start;
     padding: 0;
     width: 100%;
@@ -86,20 +86,20 @@ button {
     flex-direction: row;
     align-items: center;
     text-align: left;
-    padding: 0.25rem 0.4rem;
+    padding: 0.2rem 0.35rem;
     border: 1px solid #eee;
     border-radius: 6px;
     transition: all 0.2s ease;
     background-color: #fff;
     width: 100%;
     cursor: move;
-    gap: 4px;
+    gap: 3px;
     flex-shrink: 0;
 }
 
 .bookmark .favicon {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     margin-bottom: 0;
     flex-shrink: 0;
     cursor: pointer;
@@ -118,7 +118,7 @@ button {
 }
 
 .bookmark:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
 
 .bookmark.dragging {
@@ -302,7 +302,7 @@ button {
 @media (max-width: 768px) and (min-width: 481px) {
     .col-auto {
         width: 50%;
-        padding: 0 0.125rem;
+        padding: 0 0.1rem;
     }
 }
 
@@ -446,4 +446,90 @@ button {
     min-width: 150px;
     visibility: visible;
     display: none;
+}
+
+.search-nav-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    padding: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+.search-nav-wrapper {
+    max-width: 600px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.search-nav-input {
+    width: 100%;
+    padding: 10px 15px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.search-nav-input:focus {
+    border-color: #4a90e2;
+}
+
+.url-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    z-index: 1001;
+}
+
+.url-suggestion-item {
+    padding: 8px 15px;
+    cursor: pointer;
+    color: #666;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.url-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 10px;
+}
+
+.delete-history {
+    color: #999;
+    font-size: 18px;
+    padding: 0 5px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: all 0.2s;
+}
+
+.delete-history:hover {
+    color: #ff4444;
+    opacity: 1;
+}
+
+.url-suggestion-item:hover {
+    background: #f5f5f5;
+}
+
+/* 调整原有内容的上边距，为搜索框留出空间 */
+.container-fluid {
+    margin-top: 60px;
 } 

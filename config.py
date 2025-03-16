@@ -2,10 +2,10 @@
 DATABASE_PATH = "bookmarks.db"
 
 # Application configuration
-SECRET_KEY = "your_secret_key"
+SECRET_KEY = "2024年12月28日 16:01:44"
 
 # Constants
-DEFAULT_COLLECTION = "Default"
+DEFAULT_COLLECTION = "常用"
 MAX_COLLECTIONS = 100
 MAX_BOOKMARKS_PER_COLLECTION = 1000
 
@@ -19,7 +19,7 @@ ERROR_BOOKMARK_LIMIT = f"Maximum {MAX_BOOKMARKS_PER_COLLECTION} bookmarks per co
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 REQUEST_TIMEOUT = 30
 DEFAULT_TITLE = "Untitled"
-DEFAULT_FAVICON = "/static/images/default-favicon.ico"
+DEFAULT_FAVICON = "/static/images/VID_20241017_1238350-1-1.jpg"
 
 # Context menu actions
 CONTEXT_MENU_EDIT = "Edit"

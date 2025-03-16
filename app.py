@@ -1,14 +1,17 @@
 import os
 import sqlite3
+from datetime import datetime
 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from werkzeug.utils import secure_filename
+from flask_cors import CORS
 
 from config import *
-from database import init_db, add_bookmark, get_collections, get_bookmarks, update_bookmark, delete_bookmark_by_id
+from database import init_db, add_bookmark, get_collections, get_bookmarks, update_bookmark, delete_bookmark_by_id, update_bookmark_order, get_changes_since, save_url_history, get_url_history
 from utils import get_webpage_info
 
 app = Flask(__name__)
+CORS(app)  # 启用CORS支持
 app.secret_key = SECRET_KEY
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'ico'}
@@ -98,12 +101,8 @@ def edit_bookmark():
         title = request.form.get('title')
         collection = request.form.get('collection')
 
-        # 获取新的网页信息（如果URL改变）
-        webpage_info = get_webpage_info(url)
-
         # 更新数据库
-        update_bookmark(bookmark_id=bookmark_id, url=url, title=title, favicon_path=webpage_info['favicon_path'],
-            collection_name=collection)
+        update_bookmark(bookmark_id=bookmark_id, url=url, title=title, collection_name=collection)
 
         flash('Bookmark updated successfully!', 'success')
         return '', 204
@@ -293,6 +292,109 @@ def delete_collection():
         return '', 204
     except Exception as e:
         return f'删除集合失败: {str(e)}', 400
+
+
+@app.route('/update_bookmark_order', methods=['POST'])
+def update_order():
+    try:
+        data = request.get_json()
+        bookmark_id = data.get('bookmark_id')
+        new_order = data.get('new_order')
+        
+        if not bookmark_id or new_order is None:
+            return 'Missing required fields', 400
+            
+        update_bookmark_order(bookmark_id, new_order)
+        return '', 204
+    except Exception as e:
+        return str(e), 400
+
+
+@app.route('/sync', methods=['POST'])
+def sync():
+    """处理同步请求"""
+    try:
+        data = request.get_json()
+        last_sync = data.get('last_sync')
+        local_changes = data.get('changes', {})
+        
+        # 获取服务器端的变更
+        server_changes = get_changes_since(last_sync)
+        
+        # 处理客户端的变更
+        if local_changes:
+            conn = sqlite3.connect(DATABASE_PATH)
+            c = conn.cursor()
+            
+            # 处理集合变更
+            for collection in local_changes.get('collections', []):
+                c.execute('''
+                    INSERT OR REPLACE INTO collections (name, updated_at)
+                    VALUES (?, CURRENT_TIMESTAMP)
+                ''', (collection['name'],))
+            
+            # 处理书签变更
+            for bookmark in local_changes.get('bookmarks', []):
+                c.execute('''
+                    INSERT OR REPLACE INTO bookmarks 
+                    (url, title, favicon_path, collection_id, updated_at)
+                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ''', (bookmark['url'], bookmark['title'], 
+                      bookmark['favicon_path'], bookmark['collection_id']))
+            
+            # 处理删除的书签
+            for bookmark_id in local_changes.get('deleted_bookmarks', []):
+                c.execute('''
+                    UPDATE bookmarks 
+                    SET deleted_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ''', (bookmark_id,))
+            
+            conn.commit()
+            conn.close()
+        
+        return jsonify({
+            'changes': server_changes,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/save_url_history', methods=['POST'])
+def save_history():
+    """保存URL访问历史"""
+    try:
+        data = request.get_json()
+        url = data.get('url')
+        
+        if not url:
+            return jsonify({'error': 'URL is required'}), 400
+            
+        # 可以从session或token中获取user_id
+        user_id = None  # 暂时不处理多用户
+        
+        save_url_history(url, user_id)
+        return jsonify({'status': 'success'}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/get_url_history', methods=['GET'])
+def get_history():
+    """获取URL访问历史"""
+    try:
+        # 可以从session或token中获取user_id
+        user_id = None  # 暂时不处理多用户
+        limit = request.args.get('limit', 100, type=int)
+        
+        urls = get_url_history(user_id, limit)
+        return jsonify({'urls': urls}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
